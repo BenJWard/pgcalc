@@ -1,6 +1,7 @@
 # pgcalc
 
-*A calculator of population genetic, and evolution statistics, built on the package ecosystem of BioJulia.*
+*A calculator of population genetic, and evolution statistics, from sequence
+files, built on the package ecosystem of BioJulia.*
 
 ## Installation
 
@@ -19,6 +20,10 @@
 ## Useage
 
 Using `pgcalc` with the `--help` flag will show you which options are available.
+
+Currently pgcalc only supports sequence (FASTA) files.
+As the BioJulia package ecosystem develops, we intend other formats to be
+supported in the future.
 
 ```sh
 N82106:pgcalc bward$ pgcalc --help
