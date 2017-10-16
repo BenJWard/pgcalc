@@ -1,0 +1,8 @@
+*.o
+*.so
+*.so.*
+*.dylib
+*.dll
+pgcalc
+pgcalc.exe
+.DS_Store
