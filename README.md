@@ -12,10 +12,14 @@ files, built on the package ecosystem of BioJulia.*
 
 2. Download this repository e.g. `git clone https://github.com/Ward9250/pgcalc.git`.
 
-3. Run the `build.jl` julia script that is provided in this repository.
-   It will download the BioJulia packages this tool depends on and will compile
-   the pgcalc.jl script into a binary for your machine, that you may run from
-   the command line.
+3. `cd` in the downloaded repository, and then run the `make` command.
+   `make` will download the BioJulia packages this tool depends on,
+   and will compile the pgcalc.jl script into a binary for your machine.
+
+4. When `make` is finished, there will be a folder called `builddir` with two
+   files inside, one is a dynamic library file (called `libpgcalc`) needed by
+   the executable, and the other file is the executable itself, called `pgcalc`
+   (or `pgcalc.exe` on Windows).
 
 ## Useage
 
@@ -64,13 +68,13 @@ To calculate any or all of these statistics, use the sample command of pgcalc, w
 flags of the statistics you want to calculate.
 
 ```sh
-pgcalc myfile.fas sample -s -n -d
+./pgcalc myfile.fas sample -s -n -d
 ```
 
 or
 
 ```sh
-pgcalc myfile.fas sample -snd
+./pgcalc myfile.fas sample -snd
 ```
 
 In the above examples, an output file called myfile_sample.csv will be generated.
@@ -89,13 +93,13 @@ Currently supported commands are:
 Example:
 
 ```sh
-pgcalc myfile.fas pairwise -dm
+./pgcalc myfile.fas pairwise -dm
 ```
 
 or with dNdS correction:
 
 ```sh
-pgcalc myfile.fas pairwise -dDm
+./pgcalc myfile.fas pairwise -dDm
 ```
 
 In the above examples, an output file called myfile_pairwise.csv will be generated.
@@ -108,7 +112,7 @@ numbers for every single codon position.
 You do this with the `dndscodon` command.
 
 ```sh
-pgcalc myfile.fas dndscodon
+./pgcalc myfile.fas dndscodon
 ```
 
 In the above examples, an output file called myfile_dndscodon.csv will be generated.
