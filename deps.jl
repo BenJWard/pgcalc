@@ -15,5 +15,6 @@ Pkg.update()
 @pkgcheck "BioSequences"
 @pkgcheck "GeneticVariation"
 @pkgcheck "NaturalSelection"
+@pkgcheck "Phylogenies"
 
 Pkg.update()

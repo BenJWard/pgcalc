@@ -5,6 +5,7 @@ using BioSequences
 
 using GeneticVariation
 using NaturalSelection
+using Phylogenies.Dating
 
 macro header_generator(name, opts, fixed)
     optionals = [Expr(:call, :ifelse, :((flags & $(0x01 << (i - 1))) > 0x00), opts.args[i], "") for i in eachindex(opts.args)]
@@ -62,6 +63,13 @@ function parsecmdline(args)
         "--mut", "-m"
             help = "Compute the number of mutations between each pair of sequences."
             action = :store_true
+        "--speeddate", "-s"
+            help = "Estimate coalescence times between each pair of sequences."
+            action = :store_true
+        "--sdmu", "-r"
+            help = "Mutation rate for speeddate estimations."
+            arg_type = Float64
+            default = 10e-9
     end
 
     return ArgParse.parse_args(args, s, as_symbols = true)
@@ -144,8 +152,13 @@ function compute_sample_stats(seqs::Vector{BioSequences.DNASequence},
     println(out, rep)
 end
 
-function compute_pairwise_stats(names::Vector{String}, seqs::Vector{BioSequences.DNASequence},
-                                out::IOStream, comp::UInt8, dndscor::Bool, rep::Int)
+function compute_pairwise_stats(names::Vector{String},
+                                seqs::Vector{BioSequences.DNASequence},
+                                out::IOStream,
+                                comp::UInt8,
+                                dndscor::Bool,
+                                rate::Float64,
+                                rep::Int)
     if comp == 0x00
         error("You must specify a sample statistic to calculate!")
     end
@@ -154,6 +167,18 @@ function compute_pairwise_stats(names::Vector{String}, seqs::Vector{BioSequences
     end
     if comp & 0x02 > 0x00
         dnds = NaturalSelection.pairwise_dNdS_NG86(seqs, 1.0, BioSequences.ncbi_trans_table[1], dndscor)
+    end
+    if comp & 0x03 > 0x00
+        mutmat = BioSequences.count_pairwise(GeneticVariation.Mutated, seqs...)
+        ctimes = similar(mutmat, SDResult)
+        s = size(mutmat)
+        @inbounds for i in 1:endof(names), j in (i + 1):endof(names)
+            m = mutmat[i, j]
+            N = m[2]
+            p = m[1] / N
+            jc = NaturalSelection.d_(p)
+            ctimes[i] = coaltime(N, jc, rate, SpeedDating)
+        end
     end
 
     @inbounds for i ∈ 1:endof(names), j ∈ (i + 1):endof(names)
@@ -164,6 +189,10 @@ function compute_pairwise_stats(names::Vector{String}, seqs::Vector{BioSequences
         if comp & 0x02 > 0x00
             dN, dS = dnds[i, j]
             print(out, dN, ", ", dS, ", ")
+        end
+        if comp & 0x03 > 0x00
+            t = ctimes[i, j]
+            print(out, t.lower, ", ", t.middle, ", ", t.upper, ", ")
         end
         println(out, rep)
     end
@@ -198,8 +227,9 @@ function compute_codon_stats(names::Vector{String}, seqs::Vector{BioSequences.DN
 
 end
 
-function pgcalc_main(args::Vector{String})
-    args = parsecmdline(args)
+function pgcalc_main(ARGS::Vector{String})
+
+    args = parsecmdline(ARGS)
 
     # Process the inputs and generate the filestreams.
     input_name::String = args[:input]
@@ -243,12 +273,13 @@ function pgcalc_main(args::Vector{String})
     if cmdname == "pairwise"
 
         pairwise_args::Dict{Symbol, Any} = args[:pairwise]
-        flags = extract_op_flags(pairwise_args, :mut, :dnds)
+        flags = extract_op_flags(pairwise_args, :mut, :dnds, :speeddate)
+        mu = pairwise_args[:sdmu]
         dnds_addone = pairwise_args[:dndscor]
         print(output_stream, "sequence_1, sequence_2, ")
-        head_generator(output_stream, flags, "n_mutations", "dN, dS")
+        head_generator(output_stream, flags, "n_mutations", "dN, dS", "Coal5, Coal50, Coal95")
         println(output_stream, ", simrep")
-        compute_pairwise_stats(seq_names, seq_store, output_stream, flags, dnds_addone, 0)
+        compute_pairwise_stats(seq_names, seq_store, output_stream, flags, dnds_addone, mu, 0)
 
         if process_simulations
             sim_stream = FASTA.Reader(open(realpath(simulation_name), "r"))
@@ -258,7 +289,7 @@ function pgcalc_main(args::Vector{String})
                     read!(sim_stream, input_records[i])
                 end
                 fill_from_records!(seq_names, seq_store, input_records)
-                compute_pairwise_stats(seq_names, seq_store, output_stream, flags, dnds_addone, simrep)
+                compute_pairwise_stats(seq_names, seq_store, output_stream, flags, dnds_addone, mu, simrep)
                 simrep += 1
             end
         end
