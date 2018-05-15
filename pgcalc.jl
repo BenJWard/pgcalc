@@ -207,8 +207,8 @@ function compute_codon_stats(names::Vector{String}, seqs::Vector{BioSequences.DN
         pos = 1
 
         for (x, y) in zip(xcdns, ycdns)
-            sx, nx = NaturalSelection.S_N_NG86(x, 1.0, BioSequences.ncbi_trans_table[1])
-            sy, ny = NaturalSelection.S_N_NG86(y, 1.0, BioSequences.ncbi_trans_table[1])
+            sx, nx = NaturalSelection.S_N_NG86(x, BioSequences.ncbi_trans_table[1])
+            sy, ny = NaturalSelection.S_N_NG86(y, BioSequences.ncbi_trans_table[1])
             S = (sx + sy) / 2.0
             N = (nx + ny) / 2.0
             DS, DN = NaturalSelection.DS_DN_NG86(x, y, BioSequences.ncbi_trans_table[1])
