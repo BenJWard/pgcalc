@@ -84,32 +84,10 @@ function extract_op_flags(args::Dict{Symbol,Any}, flags::Vararg{Symbol})
     return bitflags
 end
 
-function compute_pairwise_stats(seqs)
-    mcounts = count_pairwise(Mutated, seqs...)
-    dnds = NaturalSelection.pairwise_dNdS_NG86(seqs)
-
-    return mcounts, dnds
-end
-
 function fill_from_records!(names, seqs, records)
     @inbounds for i in eachindex(seqs)
         names[i] = FASTA.identifier(records[i])
         seqs[i] = FASTA.sequence(DNASequence, records[i])
-    end
-end
-
-function process_sims(input::IO, sout::IO, pout::IO, records::Vector{FASTA.Record}, seq_names::Vector{String}, seq_store::Vector{DNASequence})
-    simrep = 1
-    while !eof(input)
-        @inbounds for i in 1:endof(records)
-            read!(input, records[i])
-        end
-        fill_from_records!(snames, seqs, recs)
-
-        seg, pi, td = compute_sample_stats(seq_store)
-        mcounts, dnds = compute_pairwise_stats(seq_store)
-
-        write_rep_to_file(output, seq_names, dnds, mcounts, pi, seg, td, simrep)
     end
 end
 
@@ -166,9 +144,9 @@ function compute_pairwise_stats(names::Vector{String},
         mut = BioSequences.count_pairwise(GeneticVariation.Mutated, seqs...)
     end
     if comp & 0x02 > 0x00
-        dnds = NaturalSelection.pairwise_dNdS_NG86(seqs, 1.0, BioSequences.ncbi_trans_table[1], dndscor)
+        dnds = NaturalSelection.pairwise_dNdS_NG86(seqs, dndscor, 1)
     end
-    if comp & 0x03 > 0x00
+    if comp & 0x04 > 0x00
         mutmat = BioSequences.count_pairwise(GeneticVariation.Mutated, seqs...)
         ctimes = similar(mutmat, SDResult)
         s = size(mutmat)
@@ -177,7 +155,9 @@ function compute_pairwise_stats(names::Vector{String},
             N = m[2]
             p = m[1] / N
             jc = NaturalSelection.d_(p)
-            ctimes[i] = coaltime(N, jc, rate, SpeedDating)
+            c = coaltime(N, jc, rate, SpeedDating)
+            println(m, ", ", N, ", ", p, ", ", jc, ", ", c)
+            ctimes[i, j] = c
         end
     end
 
@@ -190,7 +170,7 @@ function compute_pairwise_stats(names::Vector{String},
             dN, dS = dnds[i, j]
             print(out, dN, ", ", dS, ", ")
         end
-        if comp & 0x03 > 0x00
+        if comp & 0x04 > 0x00
             t = ctimes[i, j]
             print(out, t.lower, ", ", t.middle, ", ", t.upper, ", ")
         end
